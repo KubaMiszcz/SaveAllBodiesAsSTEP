@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 namespace Macro2
 {
 [Guid("fcaaccd5-4cd6-4682-a2d6-5f5c3d34c3d8")]
-    public partial class SolidWorksMacro
+    public partial class SaveAllBodiesAsSTEP
     {
         // [TODO] Non-user code interferes with exception handling.
         //[System.Diagnostics.DebuggerNonUserCodeAttribute()]

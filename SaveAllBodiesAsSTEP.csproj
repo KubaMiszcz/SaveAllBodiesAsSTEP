@@ -49,13 +49,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="SolidWorksMacroStartup.cs">
-      <DependentUpon>SolidWorksMacro.cs</DependentUpon>
+    <Compile Include="SaveAllBodiesAsSTEPStartup.cs">
+      <DependentUpon>SaveAllBodiesAsSTEP.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="SolidWorksMacro.cs">
+    <Compile Include="SaveAllBodiesAsSTEP.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
