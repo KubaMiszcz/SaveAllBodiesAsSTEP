@@ -1,4 +1,6 @@
-﻿using System;
+﻿using SolidWorks.Interop.sldworks;
+using SolidWorks.Interop.swconst;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,10 +10,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 
-using SolidWorks.Interop.sldworks;
-
-
-
 namespace Macro2
 {
     public partial class SolidWorksMacro
@@ -19,9 +17,10 @@ namespace Macro2
         // The SldWorks swApp variable is pre-assigned for you.
         public SldWorks swApp;
         public ModelDoc2 swModel;
-        private const int Visible = 1;
-        private const int NonVisible = 0;
-        private const int swThisConfiguration = 1;
+        private const int Visible = (int)swComponentVisibilityState_e.swComponentVisible;
+        private const int NonVisible = (int)swComponentVisibilityState_e.swComponentHidden;
+        private const int swThisConfiguration = (int)swInConfigurationOpts_e.swThisConfiguration;
+        private const int swSolidBody = (int)swBodyType_e.swSolidBody;
 
         public void Main()
         {
@@ -33,8 +32,8 @@ namespace Macro2
             {
                 AssemblyDoc swAssembly = (AssemblyDoc)swModel;
                 var visibleComponents = GetAllVisibleComponents(swAssembly);
-                var visibleComponentsNames = new List<string>();
-                visibleComponents.ForEach(c => visibleComponentsNames.Add(c.Name2));
+
+                var visibleComponentsNames = visibleComponents.Select(c => c.Name2);
 
                 TemporaryHideAllForSaving(visibleComponents);
                 foreach (var component in visibleComponents)
@@ -50,10 +49,15 @@ namespace Macro2
 
             if (IsPart_SLDPRT(fullFilePath)) // PART
             {
-                //PartDoc swPart = (PartDoc)swModel;
-                //var visibleComponents = (swPart.GetBodies2;
+                PartDoc swPart = (PartDoc)swModel;
+                //var visibleBodies = (Object[])swPart.GetBodies2((int)swBodyType_e.swSolidBody, true);
+                var visibleBodies = ((Object[])swPart.GetBodies2((int)swBodyType_e.swSolidBody, true)).Select(b => (Body2)b);
 
+                var aa = visibleBodies.Select(b => b.Name);
 
+                //var visibleComponentsNames = new List<string>();
+                //visibleBodies.tol.ForEach(c => visibleComponentsNames.Add(c.Name2));
+                ;
 
             }
 
@@ -91,12 +95,14 @@ namespace Macro2
 
         private void ShowComponent(Component2 component)
         {
-            component.SetVisibility(Visible, swThisConfiguration, null);
+            //component.SetVisibility(Visible, swThisConfiguration, null);
+            component.Visible = Visible;
         }
 
         private void HideComponent(Component2 component)
         {
-            component.SetVisibility(NonVisible, swThisConfiguration, null);
+            //component.SetVisibility(NonVisible, swThisConfiguration, null);
+            component.Visible = NonVisible;
         }
 
         private void TemporaryHideAllForSaving(List<Component2> visibleComponents)
@@ -111,9 +117,6 @@ namespace Macro2
 
 
 
-
-
-
         private bool SaveComponent(Component2 component, string fullDirectoryPath)
         {
             var path = Path.Combine(fullDirectoryPath, component.Name2 + ".STEP");
@@ -124,22 +127,16 @@ namespace Macro2
 
         private List<Component2> GetAllVisibleComponents(AssemblyDoc swAssembly)
         {
-            object[] allComponents = (Object[])swAssembly.GetComponents(ToplevelOnly: true);
             //no use GetVisibleComponentsInView becuase it gets all in tree
             //and havent switch toplevelonly
             //but i need only toplevel
-            var visibleComponents = new List<Component2>();
+            var allComponents = ((Object[])swAssembly.GetComponents(ToplevelOnly: true))
+                .Select(c => (Component2)c)
+                .Where(c => c.Visible == Visible)
+                .ToList()
+                ;
 
-            foreach (var item in allComponents)
-            {
-                var component = (Component2)item;
-                if (component.Visible == Visible)
-                {
-                    visibleComponents.Add(component);
-                }
-            }
-
-            return visibleComponents;
+            return allComponents;
         }
 
         private bool IsAssembly_SLDASM(string fullFilePath)
