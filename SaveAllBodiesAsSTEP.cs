@@ -28,14 +28,25 @@ namespace SaveAllBodiesAsSTEP
             var fullFilePath = swModel.GetPathName();
             var fullDirectoryPath = Path.GetDirectoryName(fullFilePath);
 
+
             if (IsAssembly_SLDASM(fullFilePath)) // ASSEMBLY
             {
                 AssemblyDoc swAssembly = (AssemblyDoc)swModel;
+                //swModel.ViewDisplayWireframe();
+                var activeConfiguration = (Configuration)swModel.GetActiveConfiguration();
+                var currentDisplayState = ((string[])activeConfiguration.GetDisplayStates())
+                    .FirstOrDefault();
+
+                var displayStatePROD =
+                    ((string[])swModel.ConfigurationManager.ActiveConfiguration.GetDisplayStates())
+                    .Where(ds => ds.ToUpper().EndsWith("PROD".ToUpper()))
+                    .FirstOrDefault();
+
+                activeConfiguration.ApplyDisplayState(displayStatePROD);
                 var visibleComponents = GetAllVisibleComponents(swAssembly);
                 var visibleComponentsNames = visibleComponents.Select(c => c.Name2);
-
-                //swModel.ViewDisplayWireframe();
-                TemporaryHideAllForSaving(visibleComponents);
+                TemporaryHideAllJustForSaving(visibleComponents);
+                
                 foreach (var component in visibleComponents)
                 {
                     Debug.Print("Name of component: " + component.Name2);
@@ -45,7 +56,10 @@ namespace SaveAllBodiesAsSTEP
                 }
 
                 RestoreVisibility(visibleComponents);
+                activeConfiguration.ApplyDisplayState(currentDisplayState);
                 //swModel.ViewDisplayShaded();
+                
+                return;
             }
 
             if (IsPart_SLDPRT(fullFilePath)) // PART
@@ -62,6 +76,8 @@ namespace SaveAllBodiesAsSTEP
                     Debug.Print("Name of body: " + body.Name);
                     SaveBody(body, fullDirectoryPath);
                 }
+
+                return;
             }
 
             return;
@@ -85,7 +101,7 @@ namespace SaveAllBodiesAsSTEP
             component.Visible = NonVisible;
         }
 
-        private void TemporaryHideAllForSaving(List<Component2> visibleComponents)
+        private void TemporaryHideAllJustForSaving(List<Component2> visibleComponents)
         {
             visibleComponents.ForEach(c => HideComponent(c));
         }
