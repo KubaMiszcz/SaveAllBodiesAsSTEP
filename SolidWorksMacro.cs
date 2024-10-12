@@ -44,6 +44,8 @@ namespace Macro2
                     SaveComponent(component, fullDirectoryPath);
                     HideComponent(component);
                 }
+
+                RestoreVisibility(visibleComponents);
             }
 
             if (IsPart_SLDPRT(fullFilePath)) // PART
@@ -56,6 +58,11 @@ namespace Macro2
 
 
             return;
+        }
+
+        private void RestoreVisibility(List<Component2> visibleComponents)
+        {
+            visibleComponents.ForEach(c => ShowComponent(c));
         }
 
         private bool SaveComponent(Component2 component, string fullDirectoryPath)
