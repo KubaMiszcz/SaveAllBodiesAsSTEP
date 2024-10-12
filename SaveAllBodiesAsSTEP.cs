@@ -34,6 +34,7 @@ namespace SaveAllBodiesAsSTEP
                 var visibleComponents = GetAllVisibleComponents(swAssembly);
                 var visibleComponentsNames = visibleComponents.Select(c => c.Name2);
 
+                //swModel.ViewDisplayWireframe();
                 TemporaryHideAllForSaving(visibleComponents);
                 foreach (var component in visibleComponents)
                 {
@@ -44,6 +45,7 @@ namespace SaveAllBodiesAsSTEP
                 }
 
                 RestoreVisibility(visibleComponents);
+                //swModel.ViewDisplayShaded();
             }
 
             if (IsPart_SLDPRT(fullFilePath)) // PART
