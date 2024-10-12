@@ -28,7 +28,6 @@ namespace SaveAllBodiesAsSTEP
             var fullFilePath = swModel.GetPathName();
             var fullDirectoryPath = Path.GetDirectoryName(fullFilePath);
 
-
             if (IsAssembly_SLDASM(fullFilePath)) // ASSEMBLY
             {
                 AssemblyDoc swAssembly = (AssemblyDoc)swModel;
@@ -46,24 +45,25 @@ namespace SaveAllBodiesAsSTEP
                 var visibleComponents = GetAllVisibleComponents(swAssembly);
                 var visibleComponentsNames = visibleComponents.Select(c => c.Name2);
                 TemporaryHideAllJustForSaving(visibleComponents);
-                
+
                 foreach (var component in visibleComponents)
                 {
                     Debug.Print("Name of component: " + component.Name2);
                     ShowComponent(component);
-                    SaveComponent(component, fullDirectoryPath);
+                    SaveFile(component.Name2, fullDirectoryPath);
                     HideComponent(component);
                 }
 
                 RestoreVisibility(visibleComponents);
                 activeConfiguration.ApplyDisplayState(currentDisplayState);
                 //swModel.ViewDisplayShaded();
-                
+
                 return;
             }
 
             if (IsPart_SLDPRT(fullFilePath)) // PART
             {
+                var fileName = Path.GetFileNameWithoutExtension(fullFilePath);
                 PartDoc swPart = (PartDoc)swModel;
                 var visibleBodies = ((Object[])swPart.GetBodies2(swSolidBody, true))
                     .Select(b => (Body2)b)
@@ -74,7 +74,14 @@ namespace SaveAllBodiesAsSTEP
                 foreach (var body in visibleBodies)
                 {
                     Debug.Print("Name of body: " + body.Name);
-                    SaveBody(body, fullDirectoryPath);
+                    if (visibleBodies.Count > 1)
+                    {
+                        SaveFile(fileName + "-" + body.Name, fullDirectoryPath);
+                    }
+                    else
+                    {
+                        SaveFile(fileName, fullDirectoryPath);
+                    }
                 }
 
                 return;
@@ -111,17 +118,9 @@ namespace SaveAllBodiesAsSTEP
             visibleComponents.ForEach(c => ShowComponent(c));
         }
 
-        private bool SaveComponent(Component2 component, string fullDirectoryPath)
+        private bool SaveFile(string fileName, string fullDirectoryPath)
         {
-            var path = Path.Combine(fullDirectoryPath, component.Name2 + ".STEP");
-            //result = swModel.SaveAs2(path, 0, true, false);
-            //swModel.SaveAs3(path, 0, 2);
-            return swModel.SaveAs(path);  //(path, 0, 2);
-        }
-
-        private bool SaveBody(Body2 body, string fullDirectoryPath)
-        {
-            var path = Path.Combine(fullDirectoryPath, body.Name + ".STEP");
+            var path = Path.Combine(fullDirectoryPath, fileName + ".STEP");
             //result = swModel.SaveAs2(path, 0, true, false);
             //swModel.SaveAs3(path, 0, 2);
             return swModel.SaveAs(path);  //(path, 0, 2);
