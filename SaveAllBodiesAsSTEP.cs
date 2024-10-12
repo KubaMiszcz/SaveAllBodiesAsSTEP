@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
@@ -50,7 +51,8 @@ namespace SaveAllBodiesAsSTEP
                 {
                     Debug.Print("Name of component: " + component.Name2);
                     ShowComponent(component);
-                    SaveFile(component.Name2, fullDirectoryPath);
+                    var filename = Regex.Replace(component.Name2, @"-\d+$", "");
+                    SaveFile(filename, fullDirectoryPath);
                     HideComponent(component);
                 }
 
