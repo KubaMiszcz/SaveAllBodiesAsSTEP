@@ -50,7 +50,8 @@ namespace Macro2
 
             if (IsPart_SLDPRT(fullFilePath)) // PART
             {
-
+                //PartDoc swPart = (PartDoc)swModel;
+                //var visibleComponents = (swPart.GetBodies2;
 
 
 
@@ -60,18 +61,7 @@ namespace Macro2
             return;
         }
 
-        private void RestoreVisibility(List<Component2> visibleComponents)
-        {
-            visibleComponents.ForEach(c => ShowComponent(c));
-        }
 
-        private bool SaveComponent(Component2 component, string fullDirectoryPath)
-        {
-            var path = Path.Combine(fullDirectoryPath, component.Name2 + ".STEP");
-            //result = swModel.SaveAs2(path, 0, true, false);
-            //swModel.SaveAs3(path, 0, 2);
-            return swModel.SaveAs(path);  //(path, 0, 2);
-        }
 
 
 
@@ -112,6 +102,24 @@ namespace Macro2
         private void TemporaryHideAllForSaving(List<Component2> visibleComponents)
         {
             visibleComponents.ForEach(c => HideComponent(c));
+        }
+
+        private void RestoreVisibility(List<Component2> visibleComponents)
+        {
+            visibleComponents.ForEach(c => ShowComponent(c));
+        }
+
+
+
+
+
+
+        private bool SaveComponent(Component2 component, string fullDirectoryPath)
+        {
+            var path = Path.Combine(fullDirectoryPath, component.Name2 + ".STEP");
+            //result = swModel.SaveAs2(path, 0, true, false);
+            //swModel.SaveAs3(path, 0, 2);
+            return swModel.SaveAs(path);  //(path, 0, 2);
         }
 
         private List<Component2> GetAllVisibleComponents(AssemblyDoc swAssembly)
