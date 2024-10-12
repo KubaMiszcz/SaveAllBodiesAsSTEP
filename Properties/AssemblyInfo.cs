@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Macro2")]
+[assembly: AssemblyTitle("SaveAllBodiesAsSTEP")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("DS SolidWorks Corp")]
-[assembly: AssemblyProduct("Macro2")]
+[assembly: AssemblyProduct("SaveAllBodiesAsSTEP")]
 [assembly: AssemblyCopyright("Copyright © DS SolidWorks Corp 2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
