@@ -34,9 +34,11 @@ namespace SaveAllBodiesAsSTEP
                 AssemblyDoc swAssembly = (AssemblyDoc)swModel;
                 //swModel.ViewDisplayWireframe();
 
-                var processedComponents = GetProcessedComponents(swAssembly);
+                var visibleComponents = GetAllVisibleComponents(swAssembly);
+                TemporaryHideAllJustForSaving(visibleComponents);
 
-                TemporaryHideAllJustForSaving(processedComponents);
+                var processedComponents = GetProcessedComponents(visibleComponents);
+                var processedComponentsNames = processedComponents.Select(p => p.Name2);
                 foreach (var component in processedComponents)
                 {
                     Debug.Print("Name of component: " + component.Name2);
@@ -46,7 +48,7 @@ namespace SaveAllBodiesAsSTEP
                     HideComponent(component);
                 }
 
-                RestoreVisibility(processedComponents);
+                RestoreVisibility(visibleComponents);
                 //swModel.ViewDisplayShaded();
 
                 return;
@@ -80,6 +82,7 @@ namespace SaveAllBodiesAsSTEP
 
             return;
         }
+
 
         /// <summary>
         /// ///////////////////////////////////
@@ -116,21 +119,30 @@ namespace SaveAllBodiesAsSTEP
             return swModel.SaveAs(path);  //(path, 0, 2);
         }
 
-        private List<Component2> GetProcessedComponents(AssemblyDoc swAssembly)
+        private List<Component2> GetAllVisibleComponents(AssemblyDoc swAssembly)
         {
             //no use GetVisibleComponentsInView becuase it gets all in tree
             //and havent switch toplevelonly
             //but i need only toplevel
             var components = ((Object[])swAssembly.GetComponents(ToplevelOnly: true))
                 .Select(c => (Component2)c)
-                .Where(c => 
-                c.Visible == Visible
-                || !c.Name2.ToLower().StartsWith("REF ".ToLower())
-                || !c.Name2.ToLower().EndsWith("REF".ToLower())
-                )
+                .Where(c => c.Visible == Visible)
                 .ToList();
 
             return components;
+        }
+
+        private List<Component2> GetProcessedComponents(List<Component2> components)
+        {
+            var result = components.Where(c =>
+                    !(
+                            c.Name2.Trim().ToLower().StartsWith("REF ".ToLower())
+                         || c.Name2.Trim().ToLower().EndsWith("REF".ToLower())
+                     )
+                )
+                .ToList();
+
+            return result;
         }
 
         private bool IsAssembly_SLDASM(string fullFilePath)
