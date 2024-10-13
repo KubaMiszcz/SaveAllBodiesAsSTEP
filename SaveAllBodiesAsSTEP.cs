@@ -33,21 +33,13 @@ namespace SaveAllBodiesAsSTEP
             {
                 AssemblyDoc swAssembly = (AssemblyDoc)swModel;
                 //swModel.ViewDisplayWireframe();
-                var activeConfiguration = (Configuration)swModel.GetActiveConfiguration();
-                var currentDisplayState = ((string[])activeConfiguration.GetDisplayStates())
-                    .FirstOrDefault();
 
-                var displayStatePROD =
-                    ((string[])swModel.ConfigurationManager.ActiveConfiguration.GetDisplayStates())
-                    .Where(ds => ds.ToUpper().EndsWith("PROD".ToUpper()))
-                    .FirstOrDefault();
-
-                activeConfiguration.ApplyDisplayState(displayStatePROD);
                 var visibleComponents = GetAllVisibleComponents(swAssembly);
-                var visibleComponentsNames = visibleComponents.Select(c => c.Name2);
-                TemporaryHideAllJustForSaving(visibleComponents);
+                var processedComponents = RemoveReferenceOnlyComponents(visibleComponents);
+                var visibleComponentsNames = processedComponents.Select(c => c.Name2);
 
-                foreach (var component in visibleComponents)
+                TemporaryHideAllJustForSaving(processedComponents);
+                foreach (var component in processedComponents)
                 {
                     Debug.Print("Name of component: " + component.Name2);
                     ShowComponent(component);
@@ -56,8 +48,7 @@ namespace SaveAllBodiesAsSTEP
                     HideComponent(component);
                 }
 
-                RestoreVisibility(visibleComponents);
-                activeConfiguration.ApplyDisplayState(currentDisplayState);
+                RestoreVisibility(processedComponents);
                 //swModel.ViewDisplayShaded();
 
                 return;
@@ -90,6 +81,14 @@ namespace SaveAllBodiesAsSTEP
             }
 
             return;
+        }
+
+        private List<Component2> RemoveReferenceOnlyComponents(List<Component2> visibleComponents)
+        {
+            return visibleComponents.Where(c =>
+            c.Name2.ToLower().StartsWith("REF ".ToLower())
+            || c.Name2.ToLower().EndsWith("REF".ToLower())
+            ).ToList();
         }
 
 
