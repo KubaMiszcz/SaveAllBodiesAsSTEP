@@ -34,9 +34,7 @@ namespace SaveAllBodiesAsSTEP
                 AssemblyDoc swAssembly = (AssemblyDoc)swModel;
                 //swModel.ViewDisplayWireframe();
 
-                var visibleComponents = GetAllVisibleComponents(swAssembly);
-                var processedComponents = RemoveReferenceOnlyComponents(visibleComponents);
-                var visibleComponentsNames = processedComponents.Select(c => c.Name2);
+                var processedComponents = GetProcessedComponents(swAssembly);
 
                 TemporaryHideAllJustForSaving(processedComponents);
                 foreach (var component in processedComponents)
@@ -83,15 +81,6 @@ namespace SaveAllBodiesAsSTEP
             return;
         }
 
-        private List<Component2> RemoveReferenceOnlyComponents(List<Component2> visibleComponents)
-        {
-            return visibleComponents.Where(c =>
-            c.Name2.ToLower().StartsWith("REF ".ToLower())
-            || c.Name2.ToLower().EndsWith("REF".ToLower())
-            ).ToList();
-        }
-
-
         /// <summary>
         /// ///////////////////////////////////
         /// Privates
@@ -127,17 +116,21 @@ namespace SaveAllBodiesAsSTEP
             return swModel.SaveAs(path);  //(path, 0, 2);
         }
 
-        private List<Component2> GetAllVisibleComponents(AssemblyDoc swAssembly)
+        private List<Component2> GetProcessedComponents(AssemblyDoc swAssembly)
         {
             //no use GetVisibleComponentsInView becuase it gets all in tree
             //and havent switch toplevelonly
             //but i need only toplevel
-            var allComponents = ((Object[])swAssembly.GetComponents(ToplevelOnly: true))
+            var components = ((Object[])swAssembly.GetComponents(ToplevelOnly: true))
                 .Select(c => (Component2)c)
-                .Where(c => c.Visible == Visible)
+                .Where(c => 
+                c.Visible == Visible
+                || !c.Name2.ToLower().StartsWith("REF ".ToLower())
+                || !c.Name2.ToLower().EndsWith("REF".ToLower())
+                )
                 .ToList();
 
-            return allComponents;
+            return components;
         }
 
         private bool IsAssembly_SLDASM(string fullFilePath)
