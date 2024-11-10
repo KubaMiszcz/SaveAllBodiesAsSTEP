@@ -5,11 +5,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Forms;
 
 namespace SaveAllBodiesAsSTEP
 {
@@ -29,59 +26,79 @@ namespace SaveAllBodiesAsSTEP
             var fullFilePath = swModel.GetPathName();
             var fullDirectoryPath = Path.GetDirectoryName(fullFilePath);
 
+
             if (IsAssembly_SLDASM(fullFilePath)) // ASSEMBLY
             {
                 AssemblyDoc swAssembly = (AssemblyDoc)swModel;
-                //swModel.ViewDisplayWireframe();
-
                 var visibleComponents = GetAllVisibleComponents(swAssembly);
-                TemporaryHideAllJustForSaving(visibleComponents);
+                var processedComponents = GetWithoutReferencedComponents(visibleComponents);
+                var processedComponentsNames = new List<string>();
 
-                var processedComponents = GetProcessedComponents(visibleComponents);
-                var processedComponentsNames = processedComponents.Select(p => p.Name2);
-                foreach (var component in processedComponents)
+                try
                 {
-                    Debug.Print("Name of component: " + component.Name2);
-                    ShowComponent(component);
-                    var filename = Regex.Replace(component.Name2, @"-\d+$", "");
-                    SaveFile(filename, fullDirectoryPath);
-                    HideComponent(component);
+                    foreach (var component in processedComponents)
+                    {
+                        processedComponentsNames.Add(component.Name2);
+                        Debug.Print("Name of component: " + component.Name2);
+                        component.Select4(false, null, false);
+                        var filename = Regex.Replace(component.Name2, @"-\d+$", "");
+                        SaveFile(filename, fullDirectoryPath);
+                    }
+
+                    ShowSummary(processedComponentsNames, "components");
+                    return;
                 }
-
-                RestoreVisibility(visibleComponents);
-                //swModel.ViewDisplayShaded();
-
-                return;
+                catch (Exception e)
+                {
+                    swApp.SendMsgToUser2(e.Message, (int)swMessageBoxIcon_e.swMbStop, (int)swMessageBoxBtn_e.swMbOk);
+                    throw;
+                }
             }
 
             if (IsPart_SLDPRT(fullFilePath)) // PART
             {
+                var processedBodiesNames = new List<string>();
                 var fileName = Path.GetFileNameWithoutExtension(fullFilePath);
                 PartDoc swPart = (PartDoc)swModel;
                 var visibleBodies = ((Object[])swPart.GetBodies2(swSolidBody, true))
                     .Select(b => (Body2)b)
                     .ToList();
 
-                var visibleBodiesNames = visibleBodies.Select(b => b.Name);
-
-                foreach (var body in visibleBodies)
+                try
                 {
-                    Debug.Print("Name of body: " + body.Name);
-                    if (visibleBodies.Count > 1)
+                    foreach (var body in visibleBodies)
                     {
-                        body.Select2(false, null);
-                        SaveFile(fileName + "-" + body.Name, fullDirectoryPath);
+                        processedBodiesNames.Add(body.Name);
+                        Debug.Print("Name of body: " + body.Name);
+                        if (visibleBodies.Count > 1)
+                        {
+                            body.Select2(false, null);
+                            SaveFile(fileName + "-" + body.Name, fullDirectoryPath);
+                        }
+                        else
+                        {
+                            SaveFile(fileName, fullDirectoryPath);
+                        }
                     }
-                    else
-                    {
-                        SaveFile(fileName, fullDirectoryPath);
-                    }
-                }
 
-                return;
+                    ShowSummary(processedBodiesNames, "bodies");
+                    return;
+                }
+                catch (Exception e)
+                {
+                    swApp.SendMsgToUser2(e.Message, (int)swMessageBoxIcon_e.swMbStop, (int)swMessageBoxBtn_e.swMbOk);
+                    throw;
+                }
             }
 
             return;
+        }
+
+        private void ShowSummary(List<string> processedFileNames, string typeName)
+        {
+            var msg = "All " + typeName + " exported successfully\n\n";
+            processedFileNames.ToList().ForEach(n => msg += "   " + n + "\n");
+            swApp.SendMsgToUser2(msg, (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk);
         }
 
 
@@ -89,28 +106,6 @@ namespace SaveAllBodiesAsSTEP
         /// ///////////////////////////////////
         /// Privates
         /// ///////////////////////////////////
-
-        private void ShowComponent(Component2 component)
-        {
-            //component.SetVisibility(Visible, swThisConfiguration, null);
-            component.Visible = Visible;
-        }
-
-        private void HideComponent(Component2 component)
-        {
-            //component.SetVisibility(NonVisible, swThisConfiguration, null);
-            component.Visible = NonVisible;
-        }
-
-        private void TemporaryHideAllJustForSaving(List<Component2> visibleComponents)
-        {
-            visibleComponents.ForEach(c => HideComponent(c));
-        }
-
-        private void RestoreVisibility(List<Component2> visibleComponents)
-        {
-            visibleComponents.ForEach(c => ShowComponent(c));
-        }
 
         private bool SaveFile(string fileName, string fullDirectoryPath)
         {
@@ -133,7 +128,7 @@ namespace SaveAllBodiesAsSTEP
             return components;
         }
 
-        private List<Component2> GetProcessedComponents(List<Component2> components)
+        private List<Component2> GetWithoutReferencedComponents(List<Component2> components)
         {
             var result = components.Where(c =>
                     !(
@@ -155,28 +150,6 @@ namespace SaveAllBodiesAsSTEP
         {
             return fullFilePath.ToUpper().EndsWith("SLDPRT".ToUpper());
         }
-
-
-
-        //private void Main2()
-        //{
-
-        //    ModelDoc2 swDoc = null;
-        //    PartDoc swPart = null;
-        //    DrawingDoc swDrawing = null;
-        //    AssemblyDoc swAssembly = null;
-        //    bool boolstatus = false;
-        //    int longstatus = 0;
-        //    int longwarnings = 0;
-        //    swDoc = ((ModelDoc2)(swApp.ActiveDoc));
-        //    boolstatus = swDoc.Extension.SelectByRay(-0.024179604907430985D, -0.0051289340948983408D, 0.048000000625847861D, -0.8236958650258458D, -0.189895394735217D, -0.53428911742396534D, 0.00020962654891361061D, 2, false, 0, 0);
-        //    // 
-        //    // Save As
-        //    longstatus = swDoc.SaveAs3("D:\\macrotest-skasuj\\TEST =ASM TTGO T-Beam V1.2 Case TEST  antenna inside.STEP", 0, 2);
-
-
-        //    return;
-        //}
 
     }
 }
