@@ -69,6 +69,7 @@ namespace SaveAllBodiesAsSTEP
                     Debug.Print("Name of body: " + body.Name);
                     if (visibleBodies.Count > 1)
                     {
+                        body.Select2(false, null);
                         SaveFile(fileName + "-" + body.Name, fullDirectoryPath);
                     }
                     else
