@@ -19,6 +19,7 @@ namespace SaveAllBodiesAsSTEP
         private const int NonVisible = (int)swComponentVisibilityState_e.swComponentHidden;
         private const int swThisConfiguration = (int)swInConfigurationOpts_e.swThisConfiguration;
         private const int swSolidBody = (int)swBodyType_e.swSolidBody;
+        private const string fileExtension = ".STEP";
 
         public void Main()
         {
@@ -26,7 +27,7 @@ namespace SaveAllBodiesAsSTEP
             var fullFilePath = swModel.GetPathName();
             var fullDirectoryPath = Path.GetDirectoryName(fullFilePath);
 
-
+            
             if (IsAssembly_SLDASM(fullFilePath)) // ASSEMBLY
             {
                 AssemblyDoc swAssembly = (AssemblyDoc)swModel;
@@ -38,11 +39,11 @@ namespace SaveAllBodiesAsSTEP
                 {
                     foreach (var component in processedComponents)
                     {
-                        processedComponentsNames.Add(component.Name2);
                         Debug.Print("Name of component: " + component.Name2);
                         component.Select4(false, null, false);
                         var filename = Regex.Replace(component.Name2, @"-\d+$", "");
-                        SaveFile(filename, fullDirectoryPath);
+                        SaveToFile(filename, fullDirectoryPath);
+                        processedComponentsNames.Add(filename);
                     }
 
                     ShowSummary(processedComponentsNames, "components");
@@ -58,7 +59,7 @@ namespace SaveAllBodiesAsSTEP
             if (IsPart_SLDPRT(fullFilePath)) // PART
             {
                 var processedBodiesNames = new List<string>();
-                var fileName = Path.GetFileNameWithoutExtension(fullFilePath);
+                var partFileName = Path.GetFileNameWithoutExtension(fullFilePath);
                 PartDoc swPart = (PartDoc)swModel;
                 var visibleBodies = ((Object[])swPart.GetBodies2(swSolidBody, true))
                     .Select(b => (Body2)b)
@@ -68,17 +69,16 @@ namespace SaveAllBodiesAsSTEP
                 {
                     foreach (var body in visibleBodies)
                     {
-                        processedBodiesNames.Add(body.Name);
+                        var fileName = partFileName;
                         Debug.Print("Name of body: " + body.Name);
                         if (visibleBodies.Count > 1)
                         {
+                            fileName += ("-" + body.Name);
                             body.Select2(false, null);
-                            SaveFile(fileName + "-" + body.Name, fullDirectoryPath);
                         }
-                        else
-                        {
-                            SaveFile(fileName, fullDirectoryPath);
-                        }
+
+                        SaveToFile(fileName, fullDirectoryPath);
+                        processedBodiesNames.Add(fileName);
                     }
 
                     ShowSummary(processedBodiesNames, "bodies");
@@ -94,12 +94,7 @@ namespace SaveAllBodiesAsSTEP
             return;
         }
 
-        private void ShowSummary(List<string> processedFileNames, string typeName)
-        {
-            var msg = "All " + typeName + " exported successfully\n\n";
-            processedFileNames.ToList().ForEach(n => msg += "   " + n + "\n");
-            swApp.SendMsgToUser2(msg, (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk);
-        }
+
 
 
         /// <summary>
@@ -107,9 +102,9 @@ namespace SaveAllBodiesAsSTEP
         /// Privates
         /// ///////////////////////////////////
 
-        private bool SaveFile(string fileName, string fullDirectoryPath)
+        private bool SaveToFile(string fileName, string fullDirectoryPath)
         {
-            var path = Path.Combine(fullDirectoryPath, fileName + ".STEP");
+            var path = Path.Combine(fullDirectoryPath, fileName + fileExtension);
             //result = swModel.SaveAs2(path, 0, true, false);
             //swModel.SaveAs3(path, 0, 2);
             return swModel.SaveAs(path);  //(path, 0, 2);
@@ -123,6 +118,7 @@ namespace SaveAllBodiesAsSTEP
             var components = ((Object[])swAssembly.GetComponents(ToplevelOnly: true))
                 .Select(c => (Component2)c)
                 .Where(c => c.Visible == Visible)
+                .Where(c => !c.IsSuppressed())
                 .ToList();
 
             return components;
@@ -139,6 +135,13 @@ namespace SaveAllBodiesAsSTEP
                 .ToList();
 
             return result;
+        }
+
+        private void ShowSummary(List<string> processedFileNames, string typeName)
+        {
+            var msg = "All " + typeName + " exported successfully 👌👌👌\n\n";
+            processedFileNames.ToList().ForEach(n => msg += "   ✔️ " + n + fileExtension + "\n");
+            swApp.SendMsgToUser2(msg, (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk);
         }
 
         private bool IsAssembly_SLDASM(string fullFilePath)
