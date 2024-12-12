@@ -21,62 +21,107 @@ namespace SaveAllBodiesAsSTEP
         {
             swModel = (ModelDoc2)swApp.ActiveDoc;
             var fullFilePath = swModel.GetPathName();
-            var fullDirectoryPath = Path.GetDirectoryName(fullFilePath);
+            //var fullDirectoryPath = Path.GetDirectoryName(fullFilePath);
             var activeConfigurationName = ((IConfiguration)swModel.GetActiveConfiguration()).Name;
             var configurationsCount = swModel.GetConfigurationCount();
 
             if (IsAssembly_SLDASM(fullFilePath)) // ASSEMBLY
             {
-                handleWithAssembly(fullDirectoryPath);
+                var componentNames = handleWithAssembly(fullFilePath, activeConfigurationName, configurationsCount);
+                ShowSummary(componentNames, "components");
             }
 
             if (IsPart_SLDPRT(fullFilePath)) // PART
             {
-                handleWithPart(fullFilePath, activeConfigurationName, fullDirectoryPath, configurationsCount);
+                var bodiesNames = handleWithPart(fullFilePath, activeConfigurationName, configurationsCount);
+                ShowSummary(bodiesNames, "bodies");
+
                 //handleWithPartDEPR(fullFilePath, activeConfigurationName, fullDirectoryPath);
             }
 
             return;
         }
 
-        private void handleWithAssembly(string fullDirectoryPath)
+        private List<string> handleWithAssembly(string fullFilePath, string activeConfigurationName, int configurationsCount)
         {
             AssemblyDoc swAssembly = (AssemblyDoc)swModel;
-            var visibleComponents = GetAllVisibleComponentsInAssembly(swAssembly);
-            var processedComponents = GetNotForReferenceComponentsOnly(visibleComponents);
+
+            //no use GetVisibleComponentsInView becuase it gets all in tree
+            //and havent switch toplevelonly
+            //but i need only toplevel
+            var allComponentsInAssembly = ((Object[])swAssembly.GetComponents(ToplevelOnly: true))
+                .Select(c => (Component2)c)
+                .Where(c => !c.IsSuppressed())
+                .ToList();
+
+            allComponentsInAssembly = GetNotForReferenceComponentsOnly(allComponentsInAssembly);
+            var processedComponents = new List<Component2>();
             var processedComponentsNames = new List<string>();
 
-            //TODO:
-            //check if anything slelected and save only selected no matter isible or not
-            //if nothin slected get all visible components and save
+            SelectionMgr swSelMgr = (SelectionMgr)swModel.SelectionManager;
+            int selectedCount = swSelMgr.GetSelectedObjectCount2(-1);
 
-            try
+            if (selectedCount == 0)
             {
-                foreach (var component in processedComponents)
+                //if nothin slected get all visible components
+                processedComponents = allComponentsInAssembly
+                    .Where(c => c.Visible == (int)swComponentVisibilityState_e.swComponentVisible)
+                    .ToList();
+            }
+            else
+            {
+                // if anything selected, save only selected no matter visible or not
+                for (int i = 1; i <= selectedCount; i++)
                 {
-                    Debug.Print("Name of component: " + component.Name2);
-                    component.Select4(false, null, false);
-                    var filename = Regex.Replace(component.Name2, @"-\d+$", "");
-                    SaveToFile(filename, fullDirectoryPath);
-                    processedComponentsNames.Add(filename);
-                }
+                    // Sprawdzenie, czy zaznaczony obiekt jest typu Component
+                    if (swSelMgr.GetSelectedObjectType3(i, -1) == (int)swSelectType_e.swSelCOMPONENTS)
+                    {
+                        var swComponent = (Component2)swSelMgr.GetSelectedObject6(i, -1);
 
-                ShowSummary(processedComponentsNames, "components");
-                return;
+                        if (swComponent != null)
+                        {
+                            processedComponents.Add(swComponent);
+                        }
+                    }
+                }
             }
-            catch (Exception e)
+
+
+            if (processedComponents.Count > 0)
             {
-                swApp.SendMsgToUser2(e.Message, (int)swMessageBoxIcon_e.swMbStop, (int)swMessageBoxBtn_e.swMbOk);
-                throw;
+                try
+                {
+                    foreach (var component in processedComponents)
+                    {
+                        Debug.Print("Name of component: " + component.Name2);
+                        var filename = Regex.Replace(component.Name2, @"-\d+$", "");
+
+                        if (configurationsCount > 1)
+                        {
+                            filename += '-' + activeConfigurationName;
+                        }
+
+                        component.Select4(false, null, false);
+
+                        SaveToFile(filename, Path.GetDirectoryName(fullFilePath));
+                        processedComponentsNames.Add(filename);
+                    }
+                }
+                catch (Exception e)
+                {
+                    swApp.SendMsgToUser2(e.Message, (int)swMessageBoxIcon_e.swMbStop, (int)swMessageBoxBtn_e.swMbOk);
+                    throw;
+                }
             }
+
+            return processedComponentsNames;
         }
 
 
-        private void handleWithPart(string fullFilePath, string activeConfigurationName, string fullDirectoryPath, int configurationsCount)
+        private List<string> handleWithPart(string fullFilePath, string activeConfigurationName, int configurationsCount)
         {
             var processedBodiesNames = new List<string>();
             var processedBodies = new List<Body2>();
-            var partFileName = Path.GetFileNameWithoutExtension(fullFilePath);
             PartDoc swPart = (PartDoc)swModel;
             var allBodiesInPart = ((Object[])swPart.GetBodies2((int)swBodyType_e.swSolidBody, BVisibleOnly: true))
                  .Select(b => (Body2)b)
@@ -90,7 +135,7 @@ namespace SaveAllBodiesAsSTEP
 
             if (selectedCount == 0)
             {
-                //if nothin slected get all visible bodies and save
+                //if nothin slected get all visible bodies
                 processedBodies = allBodiesInPart.Where(b => b.Visible).ToList();
             }
             else
@@ -115,9 +160,12 @@ namespace SaveAllBodiesAsSTEP
             {
                 try
                 {
+                    var partFileName = Path.GetFileNameWithoutExtension(fullFilePath);
+
                     foreach (var body in processedBodies)
                     {
                         Debug.Print("Name of body: " + body.Name);
+
                         var fileName = partFileName;
 
                         if (configurationsCount > 1)
@@ -131,12 +179,9 @@ namespace SaveAllBodiesAsSTEP
                             body.Select2(false, null);
                         }
 
-                        SaveToFile(fileName, fullDirectoryPath);
+                        SaveToFile(fileName, Path.GetDirectoryName(fullFilePath));
                         processedBodiesNames.Add(fileName);
                     }
-
-                    ShowSummary(processedBodiesNames, "bodies");
-                    return;
                 }
                 catch (Exception e)
                 {
@@ -144,6 +189,8 @@ namespace SaveAllBodiesAsSTEP
                     throw;
                 }
             }
+
+            return processedBodiesNames;
         }
 
         /// <summary>
@@ -152,67 +199,12 @@ namespace SaveAllBodiesAsSTEP
         /// ///////////////////////////////////
         /// 
 
-        private void handleWithPartDEPR(string fullFilePath, string activeConfigurationName, string fullDirectoryPath)
-        {
-            var processedBodiesNames = new List<string>();
-            var partFileName = Path.GetFileNameWithoutExtension(fullFilePath);
-            PartDoc swPart = (PartDoc)swModel;
-
-            var visibleBodies = ((Object[])swPart.GetBodies2((int)swBodyType_e.swSolidBody, true))
-                .Select(b => (Body2)b) //it gets also nonvisible body? why?
-                                       //.Where(b=>b.Visible) //
-                .ToList();
-
-            try
-            {
-                foreach (var body in visibleBodies)
-                {
-                    var fileName = partFileName + '-' + activeConfigurationName;
-
-                    if (visibleBodies.Count > 1)
-                    {
-                        fileName += ("-" + body.Name);
-                        body.Select2(false, null);
-                    }
-
-                    SaveToFile(fileName, fullDirectoryPath);
-                    processedBodiesNames.Add(fileName);
-                }
-
-                ShowSummary(processedBodiesNames, "bodies");
-                return;
-            }
-            catch (Exception e)
-            {
-                swApp.SendMsgToUser2(e.Message, (int)swMessageBoxIcon_e.swMbStop, (int)swMessageBoxBtn_e.swMbOk);
-                throw;
-            }
-        }
-
-
-
         private bool SaveToFile(string fileName, string fullDirectoryPath)
         {
             var path = Path.Combine(fullDirectoryPath, fileName + fileExtension);
             //result = swModel.SaveAs2(path, 0, true, false);
             //swModel.SaveAs3(path, 0, 2);
             return swModel.SaveAs(path);  //(path, 0, 2);
-        }
-
-        private List<Component2> GetAllVisibleComponentsInAssembly(AssemblyDoc swAssembly)
-        {
-            //no use GetVisibleComponentsInView becuase it gets all in tree
-            //and havent switch toplevelonly
-            //but i need only toplevel
-
-            const int Visible = (int)swComponentVisibilityState_e.swComponentVisible;
-            var components = ((Object[])swAssembly.GetComponents(ToplevelOnly: true))
-                .Select(c => (Component2)c)
-                .Where(c => c.Visible == Visible)
-                .Where(c => !c.IsSuppressed())
-                .ToList();
-
-            return components;
         }
 
         private List<Component2> GetNotForReferenceComponentsOnly(List<Component2> components)
