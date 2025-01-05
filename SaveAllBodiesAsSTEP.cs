@@ -153,6 +153,17 @@ namespace SaveAllBodiesAsSTEP
                             processedBodies.Add(swBody);
                         }
                     }
+
+                    if (swSelMgr.GetSelectedObjectType3(i, -1) == (int)swSelectType_e.swSelFACES)
+                    {
+                        var swFace = (Face2)swSelMgr.GetSelectedObject6(i, -1);
+                        var swBody = (Body2)swFace.GetBody();
+
+                        if (swBody != null)
+                        {
+                            processedBodies.Add(swBody);
+                        }
+                    }
                 }
             }
 
