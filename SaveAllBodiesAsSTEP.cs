@@ -15,7 +15,9 @@ namespace SaveAllBodiesAsSTEP
         // The SldWorks swApp variable is pre-assigned for you.
         public SldWorks swApp;
         public ModelDoc2 swModel;
+        // to change output file it is enough to change this extension
         private const string fileExtension = ".STEP";
+        //private const string fileExtension = ".STL"; 
 
         public void Main()
         {
